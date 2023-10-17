@@ -99,7 +99,12 @@ function main(workbook: ExcelScript.Workbook) {
 	for (const [material, rows] of Array.from(groupedByMaterial)) {
 		const materialWorksheet = workbook.addWorksheet();
 		const worksheetName = material.slice(0, 30) || SETTINGS.NO_MATERIAL_LABEL;
-		materialWorksheet.setName(worksheetName);
+
+		try {
+			materialWorksheet.setName(worksheetName);
+		} catch (e) {
+			console.log(`Failed to set worksheetname: ${worksheetName}`);
+		}
 
 		const range = materialWorksheet.getRangeByIndexes(0, 0, rows.length, columnCount);
 		range.setValues(rows as ExcelCell[][]);
