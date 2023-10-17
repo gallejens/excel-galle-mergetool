@@ -5,28 +5,30 @@ const SETTINGS = {
 	// Het character dat wordt geplaatst tussen labels die als gelijk worden behandeld. BV: Zij L|R
 	LABEL_MERGE_CONCAT_CHAR: '|',
 	// Characters waarbij labels als gelijk worden behandeld. BV: Zij L & Zij R -> Zij L|R
-	LABEL_MERGE_CHARACTERS: [
+	LABEL_MERGE_STRINGS: [
 		['L', 'R'],
 		['O', 'B'],
 		['V', 'A'],
+		['links', 'rechts'],
 	],
 	// Vervangend materiaallabel indien er geen materiaal gedefineerd is
 	NO_MATERIAL_LABEL: 'Onbekend Materiaal',
+	MERGE_LABELS: true,
 };
 
 // Types
-type ExcelRow = string | number | boolean;
-type MergedRow = ExcelRow | string[];
+type ExcelCell = string | number | boolean;
+type MergedCell = ExcelCell | string[];
 
 // Do not touch
 const COLUMNS = {
-	length: {idx: 0, unique: true},
-	width: {idx: 1, unique: true},
-	amount: {idx: 2, unique: false},
-	material: {idx: 3, unique: true},
-	rotation: {idx: 4, unique: true},
-	label: {idx: 5, unique: false},
-} satisfies Record<string, {idx: number; unique: boolean}>;
+	length: {idx: 0, unique: true, center: false},
+	width: {idx: 1, unique: true, center: false},
+	amount: {idx: 2, unique: false, center: true},
+	material: {idx: 3, unique: true, center: false},
+	rotation: {idx: 4, unique: true, center: true},
+	label: {idx: 5, unique: false, center: false},
+};
 
 const uniqueColumns = Object.values(COLUMNS)
 	.filter((c) => c.unique)
@@ -34,12 +36,14 @@ const uniqueColumns = Object.values(COLUMNS)
 
 //@ts-ignore
 function main(workbook: ExcelScript.Workbook) {
-	const dataSheet = workbook.getActiveWorksheet();
-	const usedRange = dataSheet.getUsedRange();
-	const values = [...usedRange.getValues().map((r) => [...r.map((i) => i)])];
+	const dataWorksheet = workbook.getActiveWorksheet();
+	const usedRange = dataWorksheet.getUsedRange();
+	const values: ExcelCell[][] = [...usedRange.getValues().map((r) => [...r.map((i) => i)])];
 	const columnCount = usedRange.getColumnCount();
 
-	const mergedRows: MergedRow[][] = [];
+	// formatWorksheet(dataWorksheet)
+
+	const mergedRows: MergedCell[][] = [];
 
 	// Merge data and populate new rows
 	for (let y = 0; y < values.length; y++) {
@@ -49,7 +53,7 @@ function main(workbook: ExcelScript.Workbook) {
 		const existingRowIdx = mergedRows.findIndex((r) => uniqueColumns.every((j) => row[j] === r[j]));
 
 		// if no row found what matches the unique columns then just add row
-		if (existingRowIdx === -1) {
+		if (existingRowIdx === -1 || !SETTINGS.MERGE_LABELS) {
 			mergedRows.push([...row]);
 			continue;
 		}
@@ -68,7 +72,7 @@ function main(workbook: ExcelScript.Workbook) {
 		}
 	}
 
-	const finalRows: ExcelRow[][] = [];
+	const finalRows: ExcelCell[][] = [];
 
 	// loop through newrows to create labels
 	for (const row of mergedRows) {
@@ -85,17 +89,21 @@ function main(workbook: ExcelScript.Workbook) {
 		}
 
 		// if statement above catches errors so we can cast
-		finalRows.push(finalRow as ExcelRow[]);
+		finalRows.push(finalRow as ExcelCell[]);
 	}
 
 	const groupedByMaterial = groupByMaterial(finalRows);
 
+	// Excel doesnt allow iterating of maps
 	for (const [material, rows] of Array.from(groupedByMaterial)) {
 		const materialWorksheet = workbook.addWorksheet();
 		const worksheetName = material.slice(0, 30) || SETTINGS.NO_MATERIAL_LABEL;
 		materialWorksheet.setName(worksheetName);
+
 		const range = materialWorksheet.getRangeByIndexes(0, 0, rows.length, columnCount);
-		range.setValues(rows as ExcelRow[][]);
+		range.setValues(rows as ExcelCell[][]);
+
+		formatWorksheet(materialWorksheet);
 	}
 }
 
@@ -114,23 +122,24 @@ function concatLabels(labels: string[]) {
 		names.add(name);
 	}
 
-	const newPrefix = mergeByLastCharacter(prefixes);
-	const newName = mergeByLastCharacter(names);
+	const newPrefix = mergeByLabelEnding(prefixes);
+	const newName = mergeByLabelEnding(names);
 
 	return `${newPrefix}_${newName}`;
 }
 
-function mergeByLastCharacter(stringsSet: Set<string>) {
+function mergeByLabelEnding(stringsSet: Set<string>) {
 	const stringsArr = Array.from(stringsSet);
 	for (let i = 0; i < stringsArr.length; i++) {
 		const str = stringsArr[i];
 
 		const splitStr = str.split(' ');
 		const merger = splitStr.pop();
-		const identifier = splitStr.join(' ');
 		if (!merger) continue;
 
-		const mergeChars = SETTINGS.LABEL_MERGE_CHARACTERS.find((c) => c.includes(merger));
+		const identifier = splitStr.join(' ');
+
+		const mergeChars = SETTINGS.LABEL_MERGE_STRINGS.find((c) => c.includes(merger));
 		if (!mergeChars) continue;
 
 		const companionChar = mergeChars[mergeChars[0] === merger ? 1 : 0];
@@ -165,7 +174,7 @@ function mergeByLastCharacter(stringsSet: Set<string>) {
 	return stringsArr.join(SETTINGS.CONCAT_CHAR);
 }
 
-function groupByMaterial(rows: ExcelRow[][]) {
+function groupByMaterial(rows: ExcelCell[][]) {
 	// loop through new rows and sort by
 	const groupedByMaterial: Map<string, typeof rows> = new Map();
 	for (const row of rows) {
@@ -174,4 +183,27 @@ function groupByMaterial(rows: ExcelRow[][]) {
 		groupedByMaterial.set(material, [...materialRows, row]);
 	}
 	return groupedByMaterial;
+}
+
+//@ts-ignore
+function formatWorksheet(worksheet: ExcelScript.Worksheet) {
+	const fullRange = worksheet.getUsedRange();
+	const fullRangeFormat = fullRange.getFormat();
+	fullRangeFormat.autofitColumns();
+
+	// We increase with for every columns a bit
+	const rowCount = fullRange.getRowCount();
+	const startColumn = fullRange.getColumnIndex();
+	const endColumn = fullRange.getColumnCount() + startColumn;
+	for (let i = startColumn; i < endColumn; i++) {
+		const columnRange = worksheet.getRangeByIndexes(0, i, rowCount, 1);
+		const columnRangeFormat = columnRange.getFormat();
+		const columnWidth = columnRange.getWidth();
+		columnRangeFormat.setColumnWidth(columnWidth + 5);
+
+		if (Object.values(COLUMNS).find((c) => c.idx === i)?.center) {
+			//@ts-ignore
+			columnRangeFormat.setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
+		}
+	}
 }
