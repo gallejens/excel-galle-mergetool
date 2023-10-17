@@ -13,6 +13,7 @@ const SETTINGS = {
 	],
 	// Vervangend materiaallabel indien er geen materiaal gedefineerd is
 	NO_MATERIAL_LABEL: 'Onbekend Materiaal',
+	// Instelling of je de labels wil samenvoegen. true -> normale werking, false -> enkel de rijen opsplitsen in aparte werkbladen
 	MERGE_LABELS: true,
 };
 
