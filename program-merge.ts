@@ -1,3 +1,4 @@
+// Enkele instellingen die je kan aanpassen
 const SETTINGS = {
 	// Het character dat wordt geplaatst tussen labels. BV: Boven/Onder
 	CONCAT_CHAR: '/',
@@ -13,24 +14,30 @@ const SETTINGS = {
 	NO_MATERIAL_LABEL: 'Onbekend Materiaal',
 };
 
+// Types
 type ExcelRow = string | number | boolean;
 type MergedRow = ExcelRow | string[];
 
+// Do not touch
+const COLUMNS = {
+	length: {idx: 0, unique: true},
+	width: {idx: 1, unique: true},
+	amount: {idx: 2, unique: false},
+	material: {idx: 3, unique: true},
+	rotation: {idx: 4, unique: true},
+	label: {idx: 5, unique: false},
+} satisfies Record<string, {idx: number; unique: boolean}>;
+
+const uniqueColumns = Object.values(COLUMNS)
+	.filter((c) => c.unique)
+	.map((c) => c.idx);
+
 //@ts-ignore
 function main(workbook: ExcelScript.Workbook) {
-	const LENGTH_COLUMN = 0;
-	const WIDTH_COLUMN = 1;
-	const AMOUNT_COLUMN = 2;
-	const MATERIAL_COLUMN = 3;
-	const ROTATION_COLUMN = 4;
-	const LABEL_COLUMN = 5;
-
 	const dataSheet = workbook.getActiveWorksheet();
 	const usedRange = dataSheet.getUsedRange();
 	const values = [...usedRange.getValues().map((r) => [...r.map((i) => i)])];
 	const columnCount = usedRange.getColumnCount();
-
-	const uniqueColumns = [LENGTH_COLUMN, WIDTH_COLUMN, MATERIAL_COLUMN, ROTATION_COLUMN];
 
 	const mergedRows: MergedRow[][] = [];
 
@@ -50,14 +57,14 @@ function main(workbook: ExcelScript.Workbook) {
 		const existingRow = mergedRows[existingRowIdx];
 
 		// increase amount
-		existingRow[AMOUNT_COLUMN] = Number(existingRow[AMOUNT_COLUMN]) + 1;
+		existingRow[COLUMNS.amount.idx] = Number(existingRow[COLUMNS.amount.idx]) + 1;
 
 		// create new label
-		const existingLabels = existingRow[LABEL_COLUMN];
+		const existingLabels = existingRow[COLUMNS.label.idx];
 		if (Array.isArray(existingLabels)) {
-			existingLabels.push(String(row[LABEL_COLUMN]));
+			existingLabels.push(String(row[COLUMNS.label.idx]));
 		} else {
-			existingRow[LABEL_COLUMN] = [String(existingLabels), String(row[LABEL_COLUMN])];
+			existingRow[COLUMNS.label.idx] = [String(existingLabels), String(row[COLUMNS.label.idx])];
 		}
 	}
 
@@ -65,15 +72,15 @@ function main(workbook: ExcelScript.Workbook) {
 
 	// loop through newrows to create labels
 	for (const row of mergedRows) {
-		let labels = row[LABEL_COLUMN];
+		let labels = row[COLUMNS.label.idx];
 		if (Array.isArray(labels)) {
 			labels = concatLabels(labels);
 		}
 
 		const finalRow = [...row];
-		finalRow[LABEL_COLUMN] = labels;
+		finalRow[COLUMNS.label.idx] = labels;
 
-		if (typeof finalRow[LABEL_COLUMN] !== 'string') {
+		if (typeof finalRow[COLUMNS.label.idx] !== 'string') {
 			throw new Error(`Label ${labels} was not a string after concat`);
 		}
 
@@ -81,15 +88,9 @@ function main(workbook: ExcelScript.Workbook) {
 		finalRows.push(finalRow as ExcelRow[]);
 	}
 
-	// loop through new rows and sort by
-	const sortedByMaterial: Map<string, typeof finalRows> = new Map();
-	for (const row of finalRows) {
-		const material = String(row[MATERIAL_COLUMN]);
-		const materialRows = sortedByMaterial.get(material) ?? [];
-		sortedByMaterial.set(material, [...materialRows, row]);
-	}
+	const groupedByMaterial = groupByMaterial(finalRows);
 
-	for (const [material, rows] of Array.from(sortedByMaterial)) {
+	for (const [material, rows] of Array.from(groupedByMaterial)) {
 		const materialWorksheet = workbook.addWorksheet();
 		const worksheetName = material.slice(0, 30) || SETTINGS.NO_MATERIAL_LABEL;
 		materialWorksheet.setName(worksheetName);
@@ -162,4 +163,15 @@ function mergeByLastCharacter(stringsSet: Set<string>) {
 	});
 
 	return stringsArr.join(SETTINGS.CONCAT_CHAR);
+}
+
+function groupByMaterial(rows: ExcelRow[][]) {
+	// loop through new rows and sort by
+	const groupedByMaterial: Map<string, typeof rows> = new Map();
+	for (const row of rows) {
+		const material = String(row[COLUMNS.material.idx]);
+		const materialRows = groupedByMaterial.get(material) ?? [];
+		groupedByMaterial.set(material, [...materialRows, row]);
+	}
+	return groupedByMaterial;
 }
