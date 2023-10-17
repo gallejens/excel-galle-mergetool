@@ -106,8 +106,9 @@ function main(workbook: ExcelScript.Workbook) {
 			console.log(`Failed to set worksheetname: ${worksheetName}`);
 		}
 
-		const range = materialWorksheet.getRangeByIndexes(0, 0, rows.length, columnCount);
-		range.setValues(rows as ExcelCell[][]);
+		const sortedRows = sortRowsByLabel(rows);
+		const range = materialWorksheet.getRangeByIndexes(0, 0, sortedRows.length, columnCount);
+		range.setValues(sortedRows);
 
 		formatWorksheet(materialWorksheet);
 	}
@@ -212,4 +213,16 @@ function formatWorksheet(worksheet: ExcelScript.Worksheet) {
 			columnRangeFormat.setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
 		}
 	}
+}
+
+function sortRowsByLabel(rows: ExcelCell[][]) {
+	return rows.sort((aRow, bRow) => {
+		const aNum = parseInt(aRow[COLUMNS.label.idx].toString());
+		const bNum = parseInt(bRow[COLUMNS.label.idx].toString());
+
+		if (Number.isNaN(aNum)) return 1;
+		if (Number.isNaN(bNum)) return -1;
+
+		return aNum - bNum;
+	});
 }
