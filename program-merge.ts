@@ -38,6 +38,15 @@ const uniqueColumns = Object.values(COLUMNS)
 //@ts-ignore
 function main(workbook: ExcelScript.Workbook) {
 	const dataWorksheet = workbook.getActiveWorksheet();
+	const dataWorksheetId = dataWorksheet.getId();
+
+	// Delete all worksheets apart from active
+	const sheets = workbook.getWorksheets();
+	for (const sheet of sheets) {
+		if (sheet.getId() === dataWorksheetId) continue;
+		sheet.delete();
+	}
+
 	const usedRange = dataWorksheet.getUsedRange();
 	const values: ExcelCell[][] = [...usedRange.getValues().map((r) => [...r.map((i) => i)])];
 	const columnCount = usedRange.getColumnCount();
