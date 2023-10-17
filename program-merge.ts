@@ -5,6 +5,7 @@ const SETTINGS = {
 	// Het character dat wordt geplaatst tussen labels die als gelijk worden behandeld. BV: Zij L|R
 	LABEL_MERGE_CONCAT_CHAR: '|',
 	// Characters waarbij labels als gelijk worden behandeld. BV: Zij L & Zij R -> Zij L|R
+	// De volgorde hoe ze hier gedefineerd staan zal ook gereflecteerd worden in de uiteindelijke labels. BV L zal altijd voor R staan (nooit R|L)
 	LABEL_MERGE_STRINGS: [
 		['L', 'R'],
 		['O', 'B'],
@@ -158,7 +159,7 @@ function mergeByLabelEnding(stringsSet: Set<string>) {
 		const mergeChars = SETTINGS.LABEL_MERGE_STRINGS.find((c) => c.includes(merger));
 		if (!mergeChars) continue;
 
-		const companionChar = mergeChars[mergeChars[0] === merger ? 1 : 0];
+		const companion = mergeChars[mergeChars[0] === merger ? 1 : 0];
 
 		let foundCompanionIdx: number | undefined;
 		// only search next names
@@ -168,15 +169,17 @@ function mergeByLabelEnding(stringsSet: Set<string>) {
 			const searchMerger = searchSplitStr.pop();
 			const searchIdentifier = searchSplitStr.join(' ');
 
-			if (searchIdentifier === identifier && searchMerger === companionChar) {
+			if (searchIdentifier === identifier && searchMerger === companion) {
 				foundCompanionIdx = j;
 				break;
 			}
 		}
 		if (!foundCompanionIdx) continue;
 
+		const sortedMergeChars = [merger, companion].sort((a, b) => mergeChars.indexOf(a) - mergeChars.indexOf(b));
+
 		stringsArr.splice(foundCompanionIdx, 1);
-		stringsArr[i] = `${str}${SETTINGS.LABEL_MERGE_CONCAT_CHAR}${companionChar}`;
+		stringsArr[i] = `${identifier} ${sortedMergeChars.join(SETTINGS.LABEL_MERGE_CONCAT_CHAR)}`;
 	}
 
 	stringsArr.sort((a, b) => {
