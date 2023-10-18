@@ -16,6 +16,8 @@ const SETTINGS = {
 	NO_MATERIAL_LABEL: 'Onbekend Materiaal',
 	// Instelling of je de labels wil samenvoegen. true -> normale werking, false -> enkel de rijen opsplitsen in aparte werkbladen
 	MERGE_LABELS: true,
+	// Het character dat wordt geplaatst tussen het originele label en de unieke ID
+	CHAR_BEFORE_UNIQUE_ID: ' ',
 };
 
 const COLUMNS = {
@@ -25,6 +27,7 @@ const COLUMNS = {
 	material: {idx: 3, unique: true},
 	rotation: {idx: 4, unique: true},
 	label: {idx: 5, unique: false},
+	id: {idx: 17, unique: false},
 };
 
 const AUTOFIT_COLUMNS = ['D', 'F', 'G', 'H', 'I', 'J', 'K'];
@@ -92,6 +95,10 @@ function main(workbook: ExcelScript.Workbook) {
 		let labels = row[COLUMNS.label.idx];
 		if (Array.isArray(labels)) {
 			labels = concatLabels(labels);
+		} else {
+			if (!SETTINGS.MERGE_LABELS) {
+				labels = `${labels}${SETTINGS.CHAR_BEFORE_UNIQUE_ID}${row[COLUMNS.id.idx]}`;
+			}
 		}
 
 		const finalRow = [...row];
