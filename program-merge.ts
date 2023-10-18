@@ -18,23 +18,25 @@ const SETTINGS = {
 	MERGE_LABELS: true,
 };
 
-// Types
-type ExcelCell = string | number | boolean;
-type MergedCell = ExcelCell | string[];
-
-// Do not touch
 const COLUMNS = {
-	length: {idx: 0, unique: true, center: false},
-	width: {idx: 1, unique: true, center: false},
-	amount: {idx: 2, unique: false, center: true},
-	material: {idx: 3, unique: true, center: false},
-	rotation: {idx: 4, unique: true, center: true},
-	label: {idx: 5, unique: false, center: false},
+	length: {idx: 0, unique: true},
+	width: {idx: 1, unique: true},
+	amount: {idx: 2, unique: false},
+	material: {idx: 3, unique: true},
+	rotation: {idx: 4, unique: true},
+	label: {idx: 5, unique: false},
 };
+
+const AUTOFIT_COLUMNS = ['D', 'F', 'G', 'H', 'I', 'J', 'K'];
+const CENTER_COLUMNS = ['C', 'E'];
 
 const uniqueColumns = Object.values(COLUMNS)
 	.filter((c) => c.unique)
 	.map((c) => c.idx);
+
+// Types
+type ExcelCell = string | number | boolean;
+type MergedCell = ExcelCell | string[];
 
 //@ts-ignore
 function main(workbook: ExcelScript.Workbook) {
@@ -206,24 +208,17 @@ function groupByMaterial(rows: ExcelCell[][]) {
 
 //@ts-ignore
 function formatWorksheet(worksheet: ExcelScript.Worksheet) {
-	const fullRange = worksheet.getUsedRange();
-	const fullRangeFormat = fullRange.getFormat();
-	fullRangeFormat.autofitColumns();
+	for (const column of AUTOFIT_COLUMNS) {
+		const range = worksheet.getRange(`${column}:${column}`);
+		const rangeFormat = range.getFormat();
+		rangeFormat.autofitColumns();
+	}
 
-	// We increase with for every columns a bit
-	const rowCount = fullRange.getRowCount();
-	const startColumn = fullRange.getColumnIndex();
-	const endColumn = fullRange.getColumnCount() + startColumn;
-	for (let i = startColumn; i < endColumn; i++) {
-		const columnRange = worksheet.getRangeByIndexes(0, i, rowCount, 1);
-		const columnRangeFormat = columnRange.getFormat();
-		const columnWidth = columnRange.getWidth();
-		columnRangeFormat.setColumnWidth(columnWidth + 5);
-
-		if (Object.values(COLUMNS).find((c) => c.idx === i)?.center) {
-			//@ts-ignore
-			columnRangeFormat.setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
-		}
+	for (const column of CENTER_COLUMNS) {
+		const range = worksheet.getRange(`${column}:${column}`);
+		const rangeFormat = range.getFormat();
+		//@ts-ignore
+		rangeFormat.setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
 	}
 }
 
