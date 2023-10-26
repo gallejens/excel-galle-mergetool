@@ -1,8 +1,9 @@
 // Enkele instellingen die je kan aanpassen
 const SETTINGS = {
-  WORKSHEET_NAME: 'Afplakbandjes TEST', // naam die het nieuwe werkblad krijgt
+  WORKSHEET_NAME: 'Afplakbandjes', // naam die het nieuwe werkblad krijgt
   OVERMAAT: 50, // overmaat in mm (aan 1 kant, dus wordt 2x toegevoegd in berekening)
   VERLIES: 0.3, // verlies (0.3 = 30%)
+  // Welke afplakband materialen gefilterd worden. 'equals' betekend volledig overeenkomstig, 'contains' checkt of materiaal het woord bevat
   IGNORE: [
     {
       equals: 'Niet afplakken',
@@ -14,11 +15,15 @@ const SETTINGS = {
       contains: 'Overmaat',
     },
   ],
+  HEADERS: ['Materiaal', 'NETTO Lengte', 'Bruto lengte incl. verlies'],
+  // Of final values in meter moeten staan (zoniet staan ze in mm)
+  IN_METERS: true,
 };
 
 const COLUMNS = {
   length: 0,
   width: 1,
+  amount: 2,
   material: 3,
   side_a: 6,
   side_b: 7,
@@ -35,17 +40,9 @@ const SIDE_TO_INCREASE_COLUMN: [ColumnKey, ColumnKey][] = [
   ['side_d', 'width'],
 ];
 
-const TEMPLATE_DATA: ExcelCell[][] = [
-  [
-    'Materiaal',
-    'Afplakmateriaal',
-    'NETTO Lengte',
-    'Bruto lengte incl. verlies',
-  ],
-];
-
 // Types
 type ExcelCell = string | number | boolean;
+type Length = { netto: number; bruto: number };
 
 //@ts-ignore
 function main(workbook: ExcelScript.Workbook) {
@@ -61,38 +58,39 @@ function main(workbook: ExcelScript.Workbook) {
     existingWorksheet.delete();
   }
 
-  // k: plaatmateriaal, v: (k: afplakmateriaal, v: lengte)
-  const grouppedValues = new Map<string, Map<string, number>>();
+  // k: afplakmateriaal, v: lengte
+  const lengthsForMaterial = new Map<string, Length>();
 
   // calculate total length for each material and side
   for (const rowValues of values) {
-    const material = String(rowValues[COLUMNS.material]);
-    const lengthsForMaterial =
-      grouppedValues.get(material) ?? new Map<string, number>();
-
     for (const [side, increaseColumn] of SIDE_TO_INCREASE_COLUMN) {
       const sideMaterial = String(rowValues[COLUMNS[side]]);
       if (shouldIgnoreMaterial(sideMaterial)) continue;
 
-      const increase = Number(rowValues[COLUMNS[increaseColumn]]);
+      const increase =
+        Number(rowValues[COLUMNS[increaseColumn]]) *
+        Number(rowValues[COLUMNS.amount]);
       if (Number.isNaN(increase)) {
         throw new Error(`${increaseColumn} is not a number`);
       }
 
-      const existingLength = lengthsForMaterial.get(sideMaterial) ?? 0;
-      lengthsForMaterial.set(sideMaterial, existingLength + increase);
+      const existingLengths = lengthsForMaterial.get(sideMaterial);
+      lengthsForMaterial.set(sideMaterial, {
+        netto: (existingLengths?.netto ?? 0) + increase,
+        bruto: (existingLengths?.bruto ?? 0) + increase + 2 * SETTINGS.OVERMAAT,
+      });
     }
-
-    grouppedValues.set(material, lengthsForMaterial);
   }
 
-  // Copy template data
-  const data = [...TEMPLATE_DATA.map(r => [...r])];
-
-  for (const [material, lengths] of Array.from(grouppedValues)) {
-    for (const [sideMaterial, length] of Array.from(lengths)) {
-      data.push([material, sideMaterial, length, 0]);
+  const data: ExcelCell[][] = [SETTINGS.HEADERS];
+  for (const [sideMaterial, lenghts] of Array.from(lengthsForMaterial)) {
+    let netto = lenghts.netto;
+    let bruto = lenghts.bruto * (1 + SETTINGS.VERLIES);
+    if (SETTINGS.IN_METERS) {
+      netto = millimeterToMeter(netto);
+      bruto = millimeterToMeter(bruto);
     }
+    data.push([sideMaterial, netto, bruto]);
   }
 
   const worksheet = workbook.addWorksheet();
@@ -124,4 +122,9 @@ function shouldIgnoreMaterial(material: string) {
     }
   }
   return false;
+}
+
+function millimeterToMeter(millimeters: number) {
+  const meters = millimeters / 1000;
+  return Math.round(meters * 10) / 10;
 }
