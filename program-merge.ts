@@ -151,18 +151,28 @@ function concatLabels(labels: string[]) {
     const splitLabel = label.split('.');
     const splitLabelLength = splitLabel.length;
 
-    if (splitLabelLength !== 2 && splitLabelLength !== 3) {
+    if (splitLabelLength < 2) {
       throw new Error(
         `Label '${label}' has an incorrect amount of . seperators`
       );
     }
 
     const prefix = splitLabel[0];
-    let name: string | undefined;
-    if (splitLabelLength === 3) {
-      name = `${splitLabel[2]} ${splitLabel[1]}`;
-    } else {
-      name = splitLabel[1];
+    let name = splitLabel[splitLabelLength - 1];
+
+    if (splitLabelLength > 2) {
+      const extras = new Set(splitLabel.slice(1, splitLabelLength - 1));
+
+      for (const extra of Array.from(extras)) {
+        const ignoreExtra = /^[0-9]{4}$/g.test(extra);
+        if (ignoreExtra) {
+          extras.delete(extra);
+        }
+      }
+
+      if (extras.size > 0) {
+        name = `${name} ${Array.from(extras).join(' ')}`;
+      }
     }
 
     // remove unique id from name
