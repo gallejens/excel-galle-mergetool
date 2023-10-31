@@ -16,7 +16,7 @@ const SETTINGS = {
   NO_MATERIAL_LABEL: 'Onbekend Materiaal',
   // Instelling of je de labels wil samenvoegen. true -> normale werking, false -> enkel de rijen opsplitsen in aparte werkbladen
   MERGE_LABELS: true,
-  // Het character dat wordt geplaatst tussen het originele label en de unieke ID
+  // Het character dat wordt geplaatst tussen het originele label en de unieke ID (indien labels niet gemerged worden)
   CHAR_BEFORE_UNIQUE_ID: ' ',
 };
 
@@ -59,22 +59,19 @@ function main(workbook: ExcelScript.Workbook) {
   ];
   const columnCount = usedRange.getColumnCount();
 
-  // formatWorksheet(dataWorksheet)
-
-  const mergedRows: MergedCell[][] = [];
-
   // Merge data and populate new rows
-  for (let y = 0; y < values.length; y++) {
-    const row = values[y];
-
-    // find idx of row in newrows array that has same unique fields
+  const mergedRows: MergedCell[][] = [];
+  for (const row of values) {
+    // find idx of row in already mergedRows that has same unique fields
     const existingRowIdx = mergedRows.findIndex(r =>
       uniqueColumns.every(j => row[j] === r[j])
     );
 
-    // if no row found what matches the unique columns then just add row
+    // if no row found that matches the unique columns then just add row
     if (existingRowIdx === -1 || !SETTINGS.MERGE_LABELS) {
-      mergedRows.push([...row]);
+      const newRow: MergedCell[] = [...row];
+      newRow[COLUMNS.label.idx] = [String(newRow[COLUMNS.label.idx])];
+      mergedRows.push(newRow);
       continue;
     }
 
@@ -89,26 +86,24 @@ function main(workbook: ExcelScript.Workbook) {
     if (Array.isArray(existingLabels)) {
       existingLabels.push(String(row[COLUMNS.label.idx]));
     } else {
-      existingRow[COLUMNS.label.idx] = [
-        String(existingLabels),
-        String(row[COLUMNS.label.idx]),
-      ];
+      throw new Error(`Merged labels was not array`);
     }
   }
 
-  const finalRows: ExcelCell[][] = [];
-
   // loop through newrows to create labels
+  const finalRows: ExcelCell[][] = [];
   for (const row of mergedRows) {
     let labels = row[COLUMNS.label.idx];
-    if (Array.isArray(labels)) {
-      labels = concatLabels(labels);
+    if (!Array.isArray(labels)) {
+      throw new Error('Merged labels are not array');
     } else {
-      if (!SETTINGS.MERGE_LABELS) {
-        labels = `${labels}${SETTINGS.CHAR_BEFORE_UNIQUE_ID}${
-          row[COLUMNS.id.idx]
-        }`;
-      }
+      labels = concatLabels(labels);
+    }
+
+    if (!SETTINGS.MERGE_LABELS) {
+      labels = `${labels}${SETTINGS.CHAR_BEFORE_UNIQUE_ID}${
+        row[COLUMNS.id.idx]
+      }`;
     }
 
     const finalRow = [...row];
@@ -153,12 +148,26 @@ function concatLabels(labels: string[]) {
   const names = new Set<string>();
 
   for (const label of labels) {
-    const splitLabel = label.split('_');
-    if (splitLabel.length !== 2) {
-      throw new Error(`Label ${label} had none or more than one underscore`);
+    const splitLabel = label.split('.');
+    const splitLabelLength = splitLabel.length;
+
+    if (splitLabelLength !== 2 && splitLabelLength !== 3) {
+      throw new Error(
+        `Label '${label}' has an incorrect amount of . seperators`
+      );
     }
 
-    const [prefix, name] = splitLabel;
+    const prefix = splitLabel[0];
+    let name: string | undefined;
+    if (splitLabelLength === 3) {
+      name = `${splitLabel[2]} ${splitLabel[1]}`;
+    } else {
+      name = splitLabel[1];
+    }
+
+    // remove unique id from name
+    name = name.replace(/[0-9]*_/g, '');
+
     prefixes.add(prefix);
     names.add(name);
   }
