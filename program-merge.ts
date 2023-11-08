@@ -151,14 +151,15 @@ function concatLabels(labels: string[]) {
     const splitLabel = label.split('.');
     const splitLabelLength = splitLabel.length;
 
-    if (splitLabelLength < 2) {
-      throw new Error(
-        `Label '${label}' has an incorrect amount of . seperators`
-      );
-    }
+    let prefix: string = '';
+    let name: string;
 
-    const prefix = splitLabel[0];
-    let name = splitLabel[splitLabelLength - 1];
+    if (splitLabelLength === 1) {
+      name = splitLabel[0];
+    } else {
+      prefix = splitLabel[0];
+      name = splitLabel[splitLabelLength - 1];
+    }
 
     if (splitLabelLength > 2) {
       const extras = new Set(splitLabel.slice(1, splitLabelLength - 1));
