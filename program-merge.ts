@@ -132,14 +132,15 @@ function main(workbook: ExcelScript.Workbook) {
       console.log(`Failed to set worksheetname: ${worksheetName}`);
     }
 
+    const finalColumnCount = SETTINGS.MERGE_LABELS ? 6 : columnCount;
     const sortedRows = sortRowsByLabel(rows);
     const range = materialWorksheet.getRangeByIndexes(
       0,
       0,
       sortedRows.length,
-      columnCount
+      finalColumnCount
     );
-    range.setValues(sortedRows);
+    range.setValues(sortedRows.map(r => r.slice(0, finalColumnCount)));
 
     formatWorksheet(materialWorksheet);
   }
