@@ -48,6 +48,8 @@ function main(workbook: ExcelScript.Workbook) {
   const dataWorksheet = workbook.getActiveWorksheet();
   const dataWorksheetId = dataWorksheet.getId();
 
+  dataWorksheet.setName('Statistic Utilized Sheets');
+
   // Delete all worksheets apart from active
   const sheets = workbook.getWorksheets();
   for (const sheet of sheets) {
