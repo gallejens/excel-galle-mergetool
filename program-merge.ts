@@ -18,6 +18,8 @@ const SETTINGS = {
   MERGE_LABELS: true,
   // Het character dat wordt geplaatst tussen het originele label en de unieke ID (indien labels niet gemerged worden)
   CHAR_BEFORE_UNIQUE_ID: ' ',
+  // Maximale breedte van alle kolommen samen (kolom F wordt automatisch aangepast met resterebde breedte)
+  MAX_COLUMNS_WIDTH: 450,
 };
 
 const COLUMNS = {
@@ -30,7 +32,7 @@ const COLUMNS = {
   id: { idx: 17, unique: false },
 };
 
-const AUTOFIT_COLUMNS = ['D', 'F', 'G', 'H', 'I', 'J', 'K'];
+const AUTOFIT_COLUMNS = ['D', 'G', 'H', 'I', 'J', 'K'];
 const CENTER_COLUMNS = ['C', 'E'];
 
 const uniqueColumns = Object.values(COLUMNS)
@@ -256,11 +258,35 @@ function groupByMaterial(rows: ExcelCell[][]) {
 
 //@ts-ignore
 function formatWorksheet(worksheet: ExcelScript.Worksheet) {
+  const fullRange = worksheet.getUsedRange();
+  const fullRangeFormat = fullRange.getFormat();
+  //@ts-ignore
+  fullRangeFormat.setVerticalAlignment(ExcelScript.VerticalAlignment.top);
+
+  const fullRangeBorder = fullRangeFormat.getRangeBorder(
+    //@ts-ignore
+    ExcelScript.BorderIndex.insideHorizontal
+  );
+  //@ts-ignore
+  fullRangeBorder.setStyle(ExcelScript.BorderLineStyle.continuous);
+
   for (const column of AUTOFIT_COLUMNS) {
     const range = worksheet.getRange(`${column}:${column}`);
     const rangeFormat = range.getFormat();
     rangeFormat.autofitColumns();
   }
+
+  // let column F to remainder of max width
+  let widthRemaining = SETTINGS.MAX_COLUMNS_WIDTH;
+  for (const column of ['A', 'B', 'C', 'D', 'E']) {
+    const range = worksheet.getRange(`${column}:${column}`);
+    const columnWidth = range.getFormat().getColumnWidth();
+    widthRemaining -= columnWidth;
+  }
+  const fRange = worksheet.getRange(`f:f`);
+  const fRangeFormat = fRange.getFormat();
+  fRangeFormat.setColumnWidth(widthRemaining);
+  fRangeFormat.setWrapText(true);
 
   for (const column of CENTER_COLUMNS) {
     const range = worksheet.getRange(`${column}:${column}`);
