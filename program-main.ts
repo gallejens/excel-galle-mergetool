@@ -57,7 +57,9 @@ const mergeProgram = (workbook: ExcelScript.Workbook) => {
   const dataWorksheet = workbook.getActiveWorksheet();
   const dataWorksheetId = dataWorksheet.getId();
 
-  dataWorksheet.setName('Statistic Utilized Sheets');
+  if (MERGE_LABELS) {
+    dataWorksheet.setName('Statistic Utilized Sheets');
+  }
 
   // Delete all worksheets apart from active
   const sheets = workbook.getWorksheets();
@@ -274,12 +276,14 @@ const mergeProgram = (workbook: ExcelScript.Workbook) => {
     //@ts-ignore
     fullRangeFormat.setVerticalAlignment(ExcelScript.VerticalAlignment.top);
 
-    const fullRangeBorder = fullRangeFormat.getRangeBorder(
+    if (MERGE_LABELS) {
+      const fullRangeBorder = fullRangeFormat.getRangeBorder(
+        //@ts-ignore
+        ExcelScript.BorderIndex.insideHorizontal
+      );
       //@ts-ignore
-      ExcelScript.BorderIndex.insideHorizontal
-    );
-    //@ts-ignore
-    fullRangeBorder.setStyle(ExcelScript.BorderLineStyle.continuous);
+      fullRangeBorder.setStyle(ExcelScript.BorderLineStyle.continuous);
+    }
 
     for (const column of AUTOFIT_COLUMNS) {
       const range = worksheet.getRange(`${column}:${column}`);
