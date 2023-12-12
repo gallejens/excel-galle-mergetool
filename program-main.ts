@@ -57,7 +57,7 @@ const mergeProgram = (workbook: ExcelScript.Workbook) => {
   const dataWorksheet = workbook.getActiveWorksheet();
   const dataWorksheetId = dataWorksheet.getId();
 
-  if (MERGE_LABELS) {
+  if (!MERGE_LABELS) {
     dataWorksheet.setName('Statistic Utilized Sheets');
   }
 
