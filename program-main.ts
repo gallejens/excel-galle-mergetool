@@ -1,5 +1,5 @@
 // Instelling of je de labels wil samenvoegen. true -> normale werking, false -> enkel de rijen opsplitsen in aparte werkbladen
-// Bij true, wordt het afplakbandjesprogramma ook uitgevoert
+// Bij true, wordt het afplakbandjesprogramma ook uitgevoerd
 const MERGE_LABELS = true;
 
 // Types
@@ -19,13 +19,13 @@ const mergeProgram = (workbook: ExcelScript.Workbook) => {
   const SETTINGS = {
     // Het character dat wordt geplaatst tussen labels. BV: Boven/Onder
     CONCAT_CHAR: '/',
-    // Het character dat wordt geplaatst tussen labels die als gelijk worden behandeld. BV: Zij L|R
-    LABEL_MERGE_CONCAT_CHAR: '|',
-    // Characters waarbij labels als gelijk worden behandeld. BV: Zij L & Zij R -> Zij L|R
+    // Het character dat wordt geplaatst tussen labels die als gelijk worden behandeld. BV: Zij L/R
+    LABEL_MERGE_CONCAT_CHAR: '/',
+    // Characters waarbij labels als gelijk worden behandeld. BV: Zij L & Zij R -> Zij L/R
     // De volgorde hoe ze hier gedefineerd staan zal ook gereflecteerd worden in de uiteindelijke labels. BV L zal altijd voor R staan (nooit R|L)
     LABEL_MERGE_STRINGS: [
       ['L', 'R'],
-      ['O', 'B'],
+      ['B', 'O'],
       ['V', 'A'],
       ['links', 'rechts'],
     ],
@@ -33,7 +33,7 @@ const mergeProgram = (workbook: ExcelScript.Workbook) => {
     NO_MATERIAL_LABEL: 'Onbekend Materiaal',
     // Het character dat wordt geplaatst tussen het originele label en de unieke ID (indien labels niet gemerged worden)
     CHAR_BEFORE_UNIQUE_ID: ' ',
-    // Maximale breedte van alle kolommen samen (kolom F wordt automatisch aangepast met resterebde breedte)
+    // Maximale breedte van alle kolommen samen (kolom F wordt automatisch aangepast met resterende breedte)
     MAX_COLUMNS_WIDTH: 450,
   };
 
