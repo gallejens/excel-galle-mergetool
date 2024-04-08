@@ -42,7 +42,7 @@ const AFPLAKBANDJES_SETTINGS = {
       contains: 'Overmaat',
     },
   ],
-  HEADERS: ['Materiaal', 'NETTO Lengte', 'Bruto lengte incl. verlies'],
+  HEADERS: ['Materiaal:', 'NETTO Lengte:', 'BRUTO Lengte (=incl. verlies):'],
 };
 
 // Types
@@ -145,7 +145,7 @@ function main(workbook: ExcelScript.Workbook) {
     if (!MERGE_LABELS) {
       labels = `${labels}${MERGE_SETTINGS.CHAR_BEFORE_UNIQUE_ID}${
         row[COLUMNS.id.idx]
-        }`;
+      }`;
     }
 
     const finalRow = [...row];
@@ -186,13 +186,23 @@ function main(workbook: ExcelScript.Workbook) {
     formatWorksheet(materialWorksheet);
 
     if (MERGE_LABELS) {
-      insertAfplakbandjesData(materialWorksheet, afplakbandjesData, material, sortedRows.length)
+      insertAfplakbandjesData(
+        materialWorksheet,
+        afplakbandjesData,
+        material,
+        sortedRows.length
+      );
     }
   }
 }
 
 //@ts-ignore
-const insertAfplakbandjesData = (worksheet: ExcelScript.Worksheet, afplakbandjesData: ReturnType<typeof getAfplakbandjesData>, material: string, startIndex: number) => {
+const insertAfplakbandjesData = (
+  worksheet: ExcelScript.Worksheet,
+  afplakbandjesData: ReturnType<typeof getAfplakbandjesData>,
+  material: string,
+  startIndex: number
+) => {
   const lenghtsPerMaterial = afplakbandjesData.get(material);
   if (!lenghtsPerMaterial) return;
 
@@ -203,8 +213,8 @@ const insertAfplakbandjesData = (worksheet: ExcelScript.Worksheet, afplakbandjes
     afplakbandjesCells.push([
       sideMaterial,
       `${millimeterToMeter(lenghts.netto)}m`,
-      `${millimeterToMeter(brutoWithLoss)}m`
-    ])
+      `${millimeterToMeter(brutoWithLoss)}m`,
+    ]);
   }
 
   // Transform cells so we put them in specific columns
@@ -212,20 +222,22 @@ const insertAfplakbandjesData = (worksheet: ExcelScript.Worksheet, afplakbandjes
   const TRANSFORM_COLUMNS: Record<number, number> = {
     0: 0,
     3: 1,
-    5: 2
-  }
-  const highestTransformColumnId = Math.max(...Object.keys(TRANSFORM_COLUMNS).map(x => Number(x)))
+    5: 2,
+  };
+  const highestTransformColumnId = Math.max(
+    ...Object.keys(TRANSFORM_COLUMNS).map(x => Number(x))
+  );
   for (const row of afplakbandjesCells) {
     const transformedRow: ExcelCell[] = [];
     for (let i = 0; i <= highestTransformColumnId; i++) {
       const cellId = TRANSFORM_COLUMNS[i];
       if (cellId === undefined) {
-        transformedRow.push('')
+        transformedRow.push('');
       } else {
-        transformedRow.push(row[cellId])
+        transformedRow.push(row[cellId]);
       }
     }
-    transformedCells.push(transformedRow)
+    transformedCells.push(transformedRow);
   }
 
   // place cells in worksheet
@@ -248,13 +260,13 @@ const insertAfplakbandjesData = (worksheet: ExcelScript.Worksheet, afplakbandjes
     ExcelScript.BorderIndex.edgeLeft,
     //@ts-ignore
     ExcelScript.BorderIndex.edgeRight,
-  ]
+  ];
 
-  const rangeFormat = range.getFormat()
+  const rangeFormat = range.getFormat();
   const rangeBorders = rangeFormat.getBorders();
   for (const rangeBorder of rangeBorders) {
-    if (!BORDERS_TO_COLOR.includes(rangeBorder.getSideIndex())) continue
-      //@ts-ignore
+    if (!BORDERS_TO_COLOR.includes(rangeBorder.getSideIndex())) continue;
+    //@ts-ignore
     rangeBorder.setStyle(ExcelScript.BorderLineStyle.continuous);
   }
 
@@ -267,8 +279,10 @@ const insertAfplakbandjesData = (worksheet: ExcelScript.Worksheet, afplakbandjes
   );
   const alignRightRangeFormat = alignRightRange.getFormat();
   //@ts-ignore
-  alignRightRangeFormat.setHorizontalAlignment(ExcelScript.HorizontalAlignment.right);
-}
+  alignRightRangeFormat.setHorizontalAlignment(
+    ExcelScript.HorizontalAlignment.right
+  );
+};
 
 const getAfplakbandjesData = (values: ExcelCell[][]) => {
   // k: plaatmateriaal, k: (k: afplakmateriaal, v: lengte)
