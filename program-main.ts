@@ -94,6 +94,8 @@ const BORDERS_TO_COLOR_IN_HEADER = [
   ExcelScript.BorderIndex.edgeRight,
 ];
 
+const MAX_PRINT_WIDTH = 484;
+
 //@ts-ignore
 function main(workbook: ExcelScript.Workbook) {
   const dataWorksheet = workbook.getActiveWorksheet();
@@ -219,6 +221,8 @@ function main(workbook: ExcelScript.Workbook) {
         material,
         sortedRows.length + startRow
       );
+
+      minimizeForPrint(materialWorksheet);
     }
   }
 }
@@ -312,7 +316,7 @@ const insertAfplakbandjesData = (
 };
 
 const getAfplakbandjesData = (values: ExcelCell[][]) => {
-  // k: plaatmateriaal, k: (k: afplakmateriaal, v: lengte)
+  // k: plaatmateriaal, v: (k: afplakmateriaal, v: lengte)
   const lengthsForMaterialPerMaterial = new Map<string, Map<string, Length>>();
 
   // calculate total length for each material and side
@@ -392,6 +396,26 @@ function formatWorksheet(worksheet: ExcelScript.Worksheet) {
       ExcelScript.HorizontalAlignment.center
     );
   }
+}
+
+function minimizeForPrint(worksheet: ExcelScript.Worksheet) {
+  const usedRange = worksheet.getUsedRange();
+  const usedRangeWidth = usedRange.getWidth();
+  if (usedRangeWidth <= MAX_PRINT_WIDTH) return;
+
+  const materialColumn = worksheet.getRange('d:d');
+  const materialColumnWidth = materialColumn.getWidth();
+
+  const newWidth = materialColumnWidth - (usedRangeWidth - MAX_PRINT_WIDTH);
+  if (newWidth < 0) {
+    throw new Error(
+      'De materiaalcolumn moet een negatieve breedte hebben om printen mogelijk te maken'
+    );
+  }
+
+  const materialColumnFormat = materialColumn.getFormat();
+  materialColumnFormat.setColumnWidth(newWidth);
+  materialColumnFormat.setWrapText(true);
 }
 
 function concatLabels(labels: string[]) {
@@ -625,9 +649,9 @@ function addHeaderLogoImage(worksheet: ExcelScript.Worksheet) {
 
   const imageTargetRange = worksheet.getRange('F1:F4');
   imageShape.setLeft(imageTargetRange.getLeft());
-  imageShape.setTop(imageTargetRange.getTop());
+  imageShape.setTop(imageTargetRange.getTop() + 0.1);
 
-  const targetHeight = imageTargetRange.getHeight();
+  const targetHeight = imageTargetRange.getHeight() - 0.1;
 
   imageShape.setHeight(targetHeight);
   imageShape.setWidth(targetHeight * imageAspectRatio);
