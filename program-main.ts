@@ -70,7 +70,7 @@ const COLUMNS = {
   side_d: { idx: 9, unique: false },
   project: { idx: 10, unique: false },
   domain: { idx: 11, unique: false },
-  id: { idx: 17, unique: false },
+  id: { idx: 18, unique: false },
 };
 
 const FORMATTING_AUTOFIT_COLUMNS = ['D', 'G', 'H', 'I', 'J', 'K'];
